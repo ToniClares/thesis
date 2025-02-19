@@ -1,0 +1,58 @@
+#%% 1. Library setup
+import numpy as np
+import open3d as o3d
+import matplotlib.pyplot as plt
+
+#%% 2. Point cloud data preparation
+DATANAME = "v01.ply"
+pcd = o3d.io.read_point_cloud("../DATA/" + DATANAME)
+
+#%% 3. Data pre-processing
+pcd_center = pcd.get_center()
+pcd.translate(-pcd_center)
+
+# %% 3.1 Statistical outlier filter
+nn = 16
+std_multiplier = 10
+
+filtered_pcd = pcd.remove_statistical_outlier(nn , std_multiplier)
+
+outliers = pcd.select_by_index(filtered_pcd[1], invert=True)
+outliers.paint_uniform_color([1, 0, 0])
+filtered_pcd = filtered_pcd[0]
+
+o3d.visualization.draw_geometries([filtered_pcd, outliers])
+
+# %% 3.2 Voxel downsampling
+voxel_size = 0.01
+
+pcd_downsampled = filtered_pcd.voxel_down_sample(voxel_size = voxel_size)
+
+o3d.visualization.draw_geometries([pcd_downsampled])
+
+# %% 3.3 Estimating normals
+
+nn_distance = np.mean(pcd.compute_nearest_neighbor_distance())
+
+radius_normals = nn_distance*4
+
+pcd_downsampled.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius_normals, max_nn=16), fast_normal_computation=True)
+
+pcd_downsampled.paint_uniform_color([0.6, 0.6, 0.6])
+o3d.visualization.draw_geometries([pcd_downsampled,outliers])
+
+# %% 3.4 RANSAC Planar Segmentation
+
+pt_to_plane_dist = 0.8
+
+plane_model, inliers = pcd_downsampled.segment_plane(distance_threshold=pt_to_plane_dist,ransac_n=3,num_iterations=1000)
+
+[a,b,c,d] = plane_model
+print("fPlane equation: {a:.2f}x + {b:.2f}y + {c:.2f}z + {d:.2f} = 0")
+
+inlier_cloud = pcd.select_by_index(inliers) 
+outlier_cloud = pcd.select_by_index(inliers, invert=True) 
+inlier_cloud.paint_uniform_color([1.0, 0, 0])
+outlier_cloud.paint_uniform_color([0.6, 0.6, 0.6])
+
+o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
