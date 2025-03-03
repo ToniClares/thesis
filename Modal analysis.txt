@@ -1,0 +1,147 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.fft import fft, fftfreq
+from scipy.signal import welch, find_peaks
+from scipy.linalg import svd
+from scipy.interpolate import make_interp_spline
+
+# Load data from all five files
+file_paths = ['data_b01.txt', 'data_b02.txt', 'data_b03.txt', 'data_b04.txt', 'data_b05.txt']  # Replace with your file paths
+all_data = []
+
+for file_path in file_paths:
+    data = np.loadtxt(file_path, delimiter=',')
+    time = data[:, 0]
+    accelerometer_data = data[:, 1:4]  # Assuming three accelerometers in each file
+    all_data.append(accelerometer_data)
+
+# Sampling parameters (assuming same for all files)
+dt = time[1] - time[0]
+fs = 1 / dt
+n = len(time)
+
+# Calculate Power Spectral Density (PSD) for each file and each accelerometer
+psd_all = []
+frequencies_all = []
+
+for data in all_data:
+    freqs, psd1 = welch(data[:, 0], fs, nperseg=2**12)
+    _, psd2 = welch(data[:, 1], fs, nperseg=2**12)
+    _, psd3 = welch(data[:, 2], fs, nperseg=2**12)
+    psd_matrix = np.array([psd1, psd2, psd3])
+    psd_all.append(psd_matrix)
+    frequencies_all.append(freqs)
+
+# Use the frequencies from the first file as a reference
+frequencies = frequencies_all[0]
+
+# Calculate SVD and mode shapes for combined PSD data
+singular_values_all = []
+U_matrix_all = []
+
+for i in range(len(frequencies)):
+    psd_aggregated = np.array([psd[:, i] for psd in psd_all])  # Corrected line: Shape should now be (5, 3)
+    psd_freq_matrix = np.dot(psd_aggregated.T, psd_aggregated)
+    
+    U, s, Vh = svd(psd_freq_matrix)
+    
+    U_matrix_all.append(U[:, 0])  # Use the first singular vector as the mode shape
+    singular_values_all.append(s[0])  # Store the first singular value
+
+# Identify Peaks in Singular Values for Mode Frequencies
+singular_values_all = np.array(singular_values_all)
+U_matrix_all = np.array(U_matrix_all)
+peaks, _ = find_peaks(singular_values_all, height=0.1 * max(singular_values_all))
+
+# Extract natural frequencies and corresponding mode shapes
+natural_frequencies = frequencies[peaks]
+mode_shapes = U_matrix_all[peaks]
+
+# Sort by frequency for consistent ordering
+sorted_indices = np.argsort(natural_frequencies)
+sorted_frequencies = natural_frequencies[sorted_indices]
+sorted_mode_shapes = mode_shapes[sorted_indices]
+
+# Plot the identified frequency peaks with frequency labels
+plt.figure()
+plt.plot(frequencies, singular_values_all, label='Valors Singulars')
+plt.plot(frequencies[peaks], singular_values_all[peaks], 'ro', label='Pics Identifi-cats')
+
+# Add labels for each identified peak
+for i, peak in enumerate(peaks):
+    freq = frequencies[peak]
+    amplitude = singular_values_all[peak]
+    plt.text(freq, amplitude, f'{freq:.2f} Hz', 
+             ha='center', va='bottom', fontsize=9, color='blue')
+
+plt.title('Pics de les freqüències identificades')
+plt.xlabel('Freqüència (Hz)')
+plt.ylabel('Amplitud del valor singular')
+plt.legend()
+plt.show()
+
+# Compute FRF for each file
+frf_all = []
+for data in all_data:
+    frf1 = fft(data[:, 0])
+    frf2 = fft(data[:, 1])
+    frf3 = fft(data[:, 2])
+    frf_all.append([frf1, frf2, frf3])
+
+# Extract imaginary parts of FRFs at identified frequencies
+fft_frequencies = fftfreq(n, dt)[:n // 2]  # Frequency array for FFT result
+imaginary_parts_all = []
+
+for freq in sorted_frequencies:
+    idx = np.argmin(np.abs(fft_frequencies - freq))
+    imag_parts = []
+    for frfs in frf_all:
+        imag_parts.append([np.imag(frfs[0][idx]), np.imag(frfs[1][idx]), np.imag(frfs[2][idx])])
+    imaginary_parts_all.append(imag_parts)
+
+# Plot Mode Shapes and Imaginary Parts for each frequency peak
+for order, (freq, mode_shape) in enumerate(zip(sorted_frequencies, sort-ed_mode_shapes), start=1):
+    print(f"Plotting for Frequency: {freq:.2f} Hz (Mode {order})")
+
+    # Mode shape amplitude plots
+    for accel_index in range(3):  # 3 accelerometers
+        plt.figure()
+        
+        # Ensure mode_shape_values has the same length as the number of files
+        mode_shape_values = [mode_shape[accel_index] for mode_shape in mode_shapes[:len(file_paths)]]
+        
+        # Check if mode_shape_values matches the number of file names
+        if len(mode_shape_values) != len(file_paths):
+            raise ValueError("Mismatch between mode_shape_values and num-ber of files")
+
+        plt.bar([f'Punt {i+1}' for i in range(len(file_paths))], mode_shape_values)
+        plt.title(f'Amplitud del mode de vibració de l\'accelerometre {accel_index + 1} a {freq:.2f} Hz')
+        plt.xlabel('Adquisicions')
+        plt.ylabel('Amplitud del mode de vibració')
+        plt.show()
+    
+    # Imaginary part of FRF plots with spline through max/min points
+    imag_parts_for_freq = imaginary_parts_all[order - 1]
+    for accel_index in range(3):  # 3 accelerometers
+        imag_values = [imag_parts[accel_index] for imag_parts in imag_parts_for_freq]
+        
+        # Extract the appropriate max or min point for each bar based on its sign
+        control_points = [val if val > 0 else val for val in imag_values]
+        
+        # Plot bars
+        plt.figure()
+        bar_positions = np.arange(1, len(file_paths) + 1)
+        plt.bar(bar_positions, imag_values)
+        
+        # Create spline to connect control points
+        spline = make_interp_spline(bar_positions, control_points, k=2)  # Smooth curve with degree 2 spline
+        x_new = np.linspace(1, len(file_paths), 100)  # Generate smooth x-values for spline
+        y_smooth = spline(x_new)
+        
+        # Plot the spline
+        plt.plot(x_new, y_smooth, 'r--', label='Interpretació de la forma del mo-de')
+        plt.title(f'Part imaginaria de la FRF per l\'accelerometre {accel_index + 1} a {freq:.2f} Hz')
+        plt.xlabel('Adquisicions')
+        plt.ylabel('Part Imaginaria de la FRF')
+        plt.legend()
+        plt.show()
