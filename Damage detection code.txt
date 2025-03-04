@@ -1,0 +1,232 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+from mpl_toolkits.mplot3d import Axes3D
+
+# Hide the Tkinter root window
+Tk().withdraw()
+
+# Load data from two files
+file_path1 = askopenfilename(title="Select the first data file", filetypes=[("Excel and Text files", "*.xlsx *.xls *.txt")])
+file_path2 = askopenfilename(title="Select the second data file", file-types=[("Excel and Text files", "*.xlsx *.xls *.txt")])
+
+def load_data(file_path):
+    if file_path.endswith('.txt'):
+        data = pd.read_csv(file_path, sep="\t", header=None)
+    else:
+        data = pd.read_excel(file_path, header=None)
+    return data
+
+# Load data
+data1 = load_data(file_path1)
+data2 = load_data(file_path2)
+
+# Extract time and acceleration data for both files
+time1 = data1.iloc[:, 0].values
+acceleration1 = data1.iloc[:, 1:].values
+time2 = data2.iloc[:, 0].values
+acceleration2 = data2.iloc[:, 1:].values
+
+# Calculate the frequency for each dataset
+frequency1 = 1 / np.mean(np.diff(time1))
+frequency2 = 1 / np.mean(np.diff(time2))
+
+# Calculate velocity for both datasets
+velocity1 = acceleration1 / frequency1
+velocity2 = acceleration2 / frequency2
+
+# Calculate mean acceleration and velocity for each dataset
+mean_acceleration1 = acceleration1.mean(axis=0)
+mean_acceleration2 = acceleration2.mean(axis=0)
+mean_velocity1 = velocity1.mean(axis=0)
+mean_velocity2 = velocity2.mean(axis=0)
+
+# Reshape into 8x6 grids
+n_rows, n_cols = 8, 6
+acc_grid1 = mean_acceleration1.reshape((n_rows, n_cols))
+acc_grid2 = mean_acceleration2.reshape((n_rows, n_cols))
+vel_grid1 = mean_velocity1.reshape((n_rows, n_cols))
+vel_grid2 = mean_velocity2.reshape((n_rows, n_cols))
+
+# Create X, Y meshgrid for plotting
+X, Y = np.meshgrid(np.arange(n_cols), np.arange(n_rows))
+
+# Plot for the first dataset
+fig = plt.figure(figsize=(12, 6))
+
+# 2D Contour plot of mean acceleration for the first dataset
+ax1 = fig.add_subplot(121)
+contour1 = ax1.contour(X, Y, acc_grid1, cmap='viridis')
+plt.clabel(contour1, inline=True, fontsize=10)
+ax1.set_xlabel("X")
+ax1.set_ylabel("Y")
+ax1.set_title("2D Contour Plot de l'Acceleració (Fitxer 1)")
+cbar1 = fig.colorbar(contour1, ax=ax1)
+cbar1.set_label('Acceleració (m/s²)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+# 3D Contour plot of mean acceleration for the first dataset
+ax2 = fig.add_subplot(122, projection='3d')
+surface1 = ax2.plot_surface(X, Y, acc_grid1, cmap='viridis')
+ax2.set_title("3D Contour Plot de l'Acceleració (Fitxer 1)")
+ax2.set_xlabel("X")
+ax2.set_ylabel("Y")
+ax2.set_zlabel("Acceleració (m/s²)")
+cbar2 = fig.colorbar(surface1, ax=ax2, shrink=0.5, aspect=5)
+cbar2.set_label('Acceleració (m/s²)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+plt.tight_layout()
+plt.show()
+
+# Repeat for velocity (File 1)
+fig = plt.figure(figsize=(12, 6))
+
+ax3 = fig.add_subplot(121)
+contour3 = ax3.contour(X, Y, vel_grid1, cmap='viridis')
+plt.clabel(contour3, inline=True, fontsize=10)
+ax3.set_xlabel("X")
+ax3.set_ylabel("Y")
+ax3.set_title("2D Contour Plot de la Velocitat (Fitxer 1)")
+cbar3 = fig.colorbar(contour3, ax=ax3)
+cbar3.set_label('Velocitat (m/s)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+ax4 = fig.add_subplot(122, projection='3d')
+surface3 = ax4.plot_surface(X, Y, vel_grid1, cmap='viridis')
+ax4.set_title("3D Contour Plot de la Velocitat (Fitxer 1)")
+ax4.set_xlabel("X")
+ax4.set_ylabel("Y")
+ax4.set_zlabel("Velocitat (m/s)")
+cbar4 = fig.colorbar(surface3, ax=ax4, shrink=0.5, aspect=5)
+cbar4.set_label('Velocitat (m/s)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+plt.tight_layout()
+plt.show()
+
+# Repeat for the second dataset (acceleration)
+fig = plt.figure(figsize=(12, 6))
+
+ax5 = fig.add_subplot(121)
+contour5 = ax5.contour(X, Y, acc_grid2, cmap='viridis')
+plt.clabel(contour5, inline=True, fontsize=10)
+ax5.set_xlabel("X")
+ax5.set_ylabel("Y")
+ax5.set_title("2D Contour Plot de l'Acceleració (Fitxer 2)")
+cbar5 = fig.colorbar(contour5, ax=ax5)
+cbar5.set_label('Acceleració (m/s²)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+ax6 = fig.add_subplot(122, projection='3d')
+surface5 = ax6.plot_surface(X, Y, acc_grid2, cmap='viridis')
+ax6.set_title("3D Contour Plot de l'Acceleració (Fitxer 2)")
+ax6.set_xlabel("X")
+ax6.set_ylabel("Y")
+ax6.set_zlabel("Acceleració (m/s²)")
+cbar6 = fig.colorbar(surface5, ax=ax6, shrink=0.5, aspect=5)
+cbar6.set_label('Acceleració (m/s²)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+plt.tight_layout()
+plt.show()
+
+# Repeat for velocity (File 2)
+fig = plt.figure(figsize=(12, 6))
+
+ax7 = fig.add_subplot(121)
+contour7 = ax7.contour(X, Y, vel_grid2, cmap='viridis')
+plt.clabel(contour7, inline=True, fontsize=10)
+ax7.set_xlabel("X")
+ax7.set_ylabel("Y")
+ax7.set_title("2D Contour Plot de la Velocitat (Fitxer 2)")
+cbar7 = fig.colorbar(contour7, ax=ax7)
+cbar7.set_label('Velocitat (m/s)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+ax8 = fig.add_subplot(122, projection='3d')
+surface7 = ax8.plot_surface(X, Y, vel_grid2, cmap='viridis')
+ax8.set_title("3D Contour Plot de la Velocitat (Fitxer 2)")
+ax8.set_xlabel("X")
+ax8.set_ylabel("Y")
+ax8.set_zlabel("Velocitat (m/s)")
+cbar8 = fig.colorbar(surface7, ax=ax8, shrink=0.5, aspect=5)
+cbar8.set_label('Velocitat (m/s)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+plt.tight_layout()
+plt.show()
+
+# Calculate the difference grids between the two datasets
+acc_diff_grid = acc_grid2 - acc_grid1
+vel_diff_grid = vel_grid2 - vel_grid1
+
+# Final plots for the differences
+fig = plt.figure(figsize=(12, 6))
+
+# 2D Contour plot for the difference in acceleration
+ax_diff_acc2d = fig.add_subplot(121)
+contour_diff_acc = ax_diff_acc2d.contour(X, Y, acc_diff_grid, cmap='seismic_r')
+plt.clabel(contour_diff_acc, inline=True, fontsize=10)
+ax_diff_acc2d.set_xlabel("X")
+ax_diff_acc2d.set_ylabel("Y")
+ax_diff_acc2d.set_title("2D Contour Plot de la Diferència en l'Acceleració")
+cbar_diff_acc = fig.colorbar(contour_diff_acc, ax=ax_diff_acc2d)
+cbar_diff_acc.set_label('Diferència en Acceleració (m/s²)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+# 3D Contour plot for the difference in acceleration
+ax_diff_acc3d = fig.add_subplot(122, projection='3d')
+surface_diff_acc = ax_diff_acc3d.plot_surface(X, Y, acc_diff_grid, cmap='seismic_r')
+ax_diff_acc3d.set_title("3D Contour Plot de la Diferència en l'Acceleració")
+ax_diff_acc3d.set_xlabel("X")
+ax_diff_acc3d.set_ylabel("Y")
+ax_diff_acc3d.set_zlabel("Diferència en Acceleració (m/s²)")
+cbar_diff_acc3d = fig.colorbar(surface_diff_acc, ax=ax_diff_acc3d, shrink=0.5, aspect=5)
+cbar_diff_acc3d.set_label('Diferència en Acceleració (m/s²)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+plt.tight_layout()
+plt.show()
+
+# Plot the velocity difference
+fig = plt.figure(figsize=(12, 6))
+
+# 2D Contour plot for the difference in velocity
+ax_diff_vel2d = fig.add_subplot(121)
+contour_diff_vel = ax_diff_vel2d.contour(X, Y, vel_diff_grid, cmap='seismic_r')
+plt.clabel(contour_diff_vel, inline=True, fontsize=10)
+ax_diff_vel2d.set_xlabel("X")
+ax_diff_vel2d.set_ylabel("Y")
+ax_diff_vel2d.set_title("2D Contour Plot de la Diferència en la Velocitat")
+cbar_diff_vel2d = fig.colorbar(contour_diff_vel, ax=ax_diff_vel2d)
+cbar_diff_vel2d.set_label('Diferència en Velocitat (m/s)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+# 3D Contour plot for the difference in velocity
+ax_diff_vel3d = fig.add_subplot(122, projection='3d')
+surface_diff_vel = ax_diff_vel3d.plot_surface(X, Y, vel_diff_grid, cmap='seismic_r')
+ax_diff_vel3d.set_title("3D Contour Plot de la Diferència en la Velocitat")
+ax_diff_vel3d.set_xlabel("X")
+ax_diff_vel3d.set_ylabel("Y")
+ax_diff_vel3d.set_zlabel("Diferència en Velocitat (m/s)")
+cbar_diff_vel3d = fig.colorbar(surface_diff_vel, ax=ax_diff_vel3d, shrink=0.5, aspect=5)
+cbar_diff_vel3d.set_label('Diferència en Velocitat (m/s)', rotation=90)
+plt.xticks(ticks=np.arange(n_cols), labels=['1', '2', '3', '4', '5', '6'])
+plt.yticks(ticks=np.arange(n_rows), labels=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+plt.tight_layout()
+plt.show()
