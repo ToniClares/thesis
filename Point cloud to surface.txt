@@ -1,0 +1,120 @@
+import os
+import Rhino
+import Rhino.Geometry as rg
+import math
+import trimesh
+
+# Function to find a PLY file
+def find_ply_file(directory, filename=None):
+    """
+    Search for a PLY file in the given directory.
+    If filename is provided, locate it directly.
+    """
+    if not os.path.exists(directory):
+        raise Exception("The directory does not exist.")
+    
+    # Look for the specific file if provided
+    if filename:
+        ply_path = os.path.join(directory, filename)
+        if os.path.isfile(ply_path) and ply_path.endswith('.ply'):
+            return ply_path
+        else:
+            raise Exception(f"Specified file '{filename}' not found in directory '{directory}'.")
+    else:
+        # Search for the first PLY file in the directory
+        for file in os.listdir(directory):
+            if file.endswith('.ply'):
+                return os.path.join(directory, file)
+        raise Exception("No PLY file found in the directory.")
+
+# Function to get point cloud dimensions
+def get_pointcloud_dimensions(pointcloud):
+    """
+    Calculate dimensions of the point cloud based on its bounding box.
+    """
+    bbox = pointcloud.GetBoundingBox(True)  # Compute bounding box
+    if not bbox.IsValid:
+        raise Exception("Bounding box is invalid.")
+
+    span = bbox.Max.X - bbox.Min.X  # Length along X
+    width = bbox.Max.Y - bbox.Min.Y  # Width along Y
+    height = bbox.Max.Z - bbox.Min.Z  # Height along Z
+
+    return span, width, height
+
+# Function to create geometry using the point cloud dimensions
+def create_geometry_from_pointcloud(pointcloud, segments=50, rows=25, thickness=0.03):
+    """
+    Create geometry using curves based on dimensions extracted from the point cloud.
+    """
+    # Get dimensions of the point cloud
+    span, width, height = get_pointcloud_dimensions(pointcloud)
+    
+    # Function for parabolic curve (cross-section)
+    def parabolic_profile(x, span, height):
+        return height * (1 - (2 * x / span) ** 2)
+
+    # Function for elliptical arc (longitudinal profile)
+    def elliptical_arc(y, width, height):
+        a = width / 2  # Semi-major axis (horizontal)
+        b = height     # Semi-minor axis (vertical)
+        return b * math.sqrt(1 - (y / a) ** 2) if abs(y) <= a else 0
+
+    # Generate points for the vault surface
+    points = []
+    for i in range(segments + 1):
+        x = -span / 2 + (span / segments) * i
+        z_cross = parabolic_profile(x, span, height)
+        row_points = []
+        for j in range(rows + 1):
+            y = -width / 2 + (width / rows) * j
+            z_long = elliptical_arc(y, width, height)
+            row_points.append(rg.Point3d(x, y, z_cross + z_long))
+        points.append(row_points)
+
+    # Create curves for lofting
+    curves = []
+    for row in points:
+        curve = rg.PolylineCurve(row)
+        curves.append(curve)
+
+    # Loft the curves to create the surface
+    loft = rg.Brep.CreateFromLoft(curves, rg.Point3d.Unset, rg.Point3d.Unset, rg.LoftType.Normal, False)
+    vault_surface = loft[0] if loft else None
+
+    # Offset the surface for thickness
+    if vault_surface:
+        offset_breps = rg.Brep.CreateOffsetBrep(vault_surface, thickness, True, True, 0.01)
+        thickened_surface = offset_breps[0] if offset_breps else None
+    else:
+        thickened_surface = None
+
+    return vault_surface, thickened_surface
+
+# Main Execution
+if 'run_script' in globals() and run_script:  # Check if toggle is True
+    try:
+        # Locate the PLY file
+        ply_path = find_ply_file(dir_path, file_name)
+        print("PLY File Found: ", ply_path)
+
+        # Create Rhino point cloud object
+        pointcloud = Rhino.Geometry.PointCloud()
+        mesh = trimesh.load_mesh(ply_path)
+        for vertex in mesh.vertices:
+            pointcloud.Add(Rhino.Geometry.Point3d(vertex[0], vertex[1], ver-tex[2]))
+
+        # Generate geometry
+        vault_surface, thickened_surface = crea-te_geometry_from_pointcloud(pointcloud)
+
+        # Output results
+        a = vault_surface  # Output the vault surface to Grasshopper
+        b = thickened_surface  # Output the thickened surface to Grasshopper
+    except Exception as e:
+        print(f"Error: {e}")
+        a = None
+        b = None
+else:
+    print("Script not executed. Toggle is off.")
+    a = None
+    b = None
