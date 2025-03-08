@@ -6,7 +6,7 @@ from scipy.linalg import svd
 from scipy.interpolate import make_interp_spline
 
 # Load data from all five files
-file_paths = ['data_b01.txt', 'data_b02.txt', 'data_b03.txt', 'data_b04.txt', 'data_b05.txt']  # Replace with your file paths
+file_paths = ['data_a01.txt', 'data_a02.txt', 'data_a03.txt', 'data_a04.txt', 'data_a05.txt']  # Replace with your file paths
 all_data = []
 
 for file_path in file_paths:
@@ -64,8 +64,8 @@ sorted_mode_shapes = mode_shapes[sorted_indices]
 
 # Plot the identified frequency peaks with frequency labels
 plt.figure()
-plt.plot(frequencies, singular_values_all, label='Valors Singulars')
-plt.plot(frequencies[peaks], singular_values_all[peaks], 'ro', label='Pics Identifi-cats')
+plt.plot(frequencies, singular_values_all, label='Singular Values')
+plt.plot(frequencies[peaks], singular_values_all[peaks], 'ro', label='Identified Peaks')
 
 # Add labels for each identified peak
 for i, peak in enumerate(peaks):
@@ -74,9 +74,9 @@ for i, peak in enumerate(peaks):
     plt.text(freq, amplitude, f'{freq:.2f} Hz', 
              ha='center', va='bottom', fontsize=9, color='blue')
 
-plt.title('Pics de les freqüències identificades')
-plt.xlabel('Freqüència (Hz)')
-plt.ylabel('Amplitud del valor singular')
+plt.title('Peaks of the Identified Frequencies')
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Singular Value Amplitude')
 plt.legend()
 plt.show()
 
@@ -100,24 +100,22 @@ for freq in sorted_frequencies:
     imaginary_parts_all.append(imag_parts)
 
 # Plot Mode Shapes and Imaginary Parts for each frequency peak
-for order, (freq, mode_shape) in enumerate(zip(sorted_frequencies, sort-ed_mode_shapes), start=1):
+for order, (freq, mode_shape) in enumerate(zip(sorted_frequencies, sorted_mode_shapes), start=1):
     print(f"Plotting for Frequency: {freq:.2f} Hz (Mode {order})")
 
     # Mode shape amplitude plots
     for accel_index in range(3):  # 3 accelerometers
         plt.figure()
         
-        # Ensure mode_shape_values has the same length as the number of files
         mode_shape_values = [mode_shape[accel_index] for mode_shape in mode_shapes[:len(file_paths)]]
         
-        # Check if mode_shape_values matches the number of file names
         if len(mode_shape_values) != len(file_paths):
-            raise ValueError("Mismatch between mode_shape_values and num-ber of files")
+            raise ValueError("Mismatch between mode_shape_values and number of files")
 
-        plt.bar([f'Punt {i+1}' for i in range(len(file_paths))], mode_shape_values)
-        plt.title(f'Amplitud del mode de vibració de l\'accelerometre {accel_index + 1} a {freq:.2f} Hz')
-        plt.xlabel('Adquisicions')
-        plt.ylabel('Amplitud del mode de vibració')
+        plt.bar([f'Point {i+1}' for i in range(len(file_paths))], mode_shape_values)
+        plt.title(f'Vibration Mode Amplitude of Accelerometer {accel_index + 1} at {freq:.2f} Hz')
+        plt.xlabel('Acquisitions')
+        plt.ylabel('Vibration Mode Amplitude')
         plt.show()
     
     # Imaginary part of FRF plots with spline through max/min points
@@ -125,23 +123,19 @@ for order, (freq, mode_shape) in enumerate(zip(sorted_frequencies, sort-ed_mode_
     for accel_index in range(3):  # 3 accelerometers
         imag_values = [imag_parts[accel_index] for imag_parts in imag_parts_for_freq]
         
-        # Extract the appropriate max or min point for each bar based on its sign
         control_points = [val if val > 0 else val for val in imag_values]
         
-        # Plot bars
         plt.figure()
         bar_positions = np.arange(1, len(file_paths) + 1)
         plt.bar(bar_positions, imag_values)
         
-        # Create spline to connect control points
-        spline = make_interp_spline(bar_positions, control_points, k=2)  # Smooth curve with degree 2 spline
-        x_new = np.linspace(1, len(file_paths), 100)  # Generate smooth x-values for spline
+        spline = make_interp_spline(bar_positions, control_points, k=2)
+        x_new = np.linspace(1, len(file_paths), 100)
         y_smooth = spline(x_new)
         
-        # Plot the spline
-        plt.plot(x_new, y_smooth, 'r--', label='Interpretació de la forma del mo-de')
-        plt.title(f'Part imaginaria de la FRF per l\'accelerometre {accel_index + 1} a {freq:.2f} Hz')
-        plt.xlabel('Adquisicions')
-        plt.ylabel('Part Imaginaria de la FRF')
+        plt.plot(x_new, y_smooth, 'r--', label='Mode Shape Interpretation')
+        plt.title(f'Imaginary Part of the FRF for Accelerometer {accel_index + 1} at {freq:.2f} Hz')
+        plt.xlabel('Acquisitions')
+        plt.ylabel('Imaginary Part of the FRF')
         plt.legend()
         plt.show()
